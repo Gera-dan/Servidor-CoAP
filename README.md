@@ -17,6 +17,11 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 ├── README.md
 ├── .gitignore
 ├── cliente_coap.py              # Cliente de prueba (Python + aiocoap)
+├── media/                       # Fotos, capturas y videos de la evidencia
+│   ├── foto_montaje.jpg
+│   ├── captura_monitor_serie.png
+│   ├── captura_cliente.png
+│   └── video_led.mp4 / video_demo.mp4
 └── servidor_coap/
     ├── servidor_coap.ino        # Firmware del ESP32
     └── secrets.h.example        # Plantilla de credenciales (copiar a secrets.h)
@@ -189,6 +194,42 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 | `ModuleNotFoundError: aiocoap` | Librería no instalada | `python -m pip install aiocoap` |
 | Error de compilación: `coap-simple.h` no encontrado | Librería sin instalar | Instalar *CoAP simple library* desde el Gestor de librerías |
 | Error de compilación: `secrets.h` no encontrado | No se creó el archivo de credenciales | `cp secrets.h.example secrets.h` |
+
+---
+
+## 10. Evidencia de funcionamiento
+
+Esta sección muestra que la práctica funciona en hardware real.
+
+### Integrantes
+- Nombre 1
+- Nombre 2
+- Nombre 3
+
+### Montaje
+Placa ESP32 conectada, con el LED en el GPIO 18.
+
+![Montaje del ESP32 con el LED](media/foto_montaje.jpg)
+
+### Monitor Serie
+Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
+
+![Monitor Serie del ESP32](media/captura_monitor_serie.png)
+
+### Cliente Python
+Respuestas de P1 a P4: `2.05 Content` en `/sensor` y `/led`, y `4.04 Not Found` en `/temperatura`.
+
+![Salida del cliente_coap.py](media/captura_cliente.png)
+
+### Videos
+
+**Video 1 — Demostración del servidor y el cliente:** ejecución de `cliente_coap.py` mientras se ve el Monitor Serie.
+
+https://github.com/USUARIO/REPO/assets/PEGAR_AQUI_EL_ENLACE_DEL_VIDEO_1
+
+**Video 2 — Control del LED con `POST /led`:** el LED se enciende con `ON` y se apaga con `OFF`.
+
+https://github.com/USUARIO/REPO/assets/PEGAR_AQUI_EL_ENLACE_DEL_VIDEO_2
 
 ---
 
