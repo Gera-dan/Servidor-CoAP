@@ -1,1 +1,199 @@
-# Servidor-CoAP
+# Servidor CoAP en ESP32 (`/sensor` y `/led`)
+
+Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP (puerto 5683) con dos recursos, y un **cliente en Python** (`aiocoap`) para probarlo.
+
+## Objetivos
+
+1. Explicar por qué CoAP usa UDP y en qué se diferencia de HTTP sobre TCP en sobrecarga, latencia y consumo de energía.
+2. Identificar las partes de un mensaje CoAP: tipo (CON, NON, ACK, RST), código, Message ID, Token y opciones como Uri-Path.
+3. Implementar un servidor con dos recursos, `/sensor` y `/led`, registrando cada uno con su función callback.
+4. Validar la comunicación con un cliente real, interpretando la respuesta y el registro del Monitor Serie.
+5. Diagnosticar los fallos típicos de red, puerto y configuración (sección 9).
+
+## Estructura del repositorio
+
+```
+.
+├── README.md
+├── .gitignore
+├── cliente_coap.py              # Cliente de prueba (Python + aiocoap)
+└── servidor_coap/
+    ├── servidor_coap.ino        # Firmware del ESP32
+    └── secrets.h.example        # Plantilla de credenciales (copiar a secrets.h)
+```
+
+---
+
+## 1. ¿Por qué CoAP usa UDP? CoAP vs. HTTP sobre TCP
+
+CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositivos con poca memoria, poca energía y redes con pérdidas. Mantiene un modelo parecido a HTTP (métodos GET/POST/PUT/DELETE, URIs, códigos de respuesta), pero lo coloca sobre **UDP**.
+
+| Aspecto | HTTP sobre TCP | CoAP sobre UDP |
+|---|---|---|
+| **Sobrecarga** | Cabeceras de texto (cientos de bytes); TCP requiere handshake de 3 vías y mantiene estado de conexión | Cabecera binaria fija de **4 bytes**; sin conexión ni estado en el transporte |
+| **Latencia** | Hay que establecer la conexión (≥ 1 RTT) antes del primer dato | Se envía la petición directamente; 1 datagrama de ida y 1 de vuelta |
+| **Consumo de energía** | Más paquetes (SYN, SYN-ACK, ACK, FIN), más tiempo con la radio activa | Menos paquetes y menos tiempo de radio encendida; el dispositivo puede dormir más |
+| **Fiabilidad** | La garantiza TCP (retransmisión, orden) | La implementa CoAP solo cuando se pide: mensajes **CON** con ACK y retransmisión |
+| **Memoria** | Pila TCP más pesada | Implementación mínima, apta para microcontroladores |
+
+**Idea clave:** CoAP no abandona la fiabilidad, la hace *opcional y ligera* en la capa de aplicación (CON/ACK), en lugar de pagar siempre el costo de TCP.
+
+---
+
+## 2. Anatomía de un mensaje CoAP
+
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++---+---+-------+---------------+-------------------------------+
+|Ver| T |  TKL  |     Code      |          Message ID           |
++---+---+-------+---------------+-------------------------------+
+|  Token (0-8 bytes)  ...                                       |
++---------------------------------------------------------------+
+|  Options (Uri-Path, Content-Format, ...) ...                  |
++---------------------------------------------------------------+
+| 0xFF |  Payload ...                                           |
++---------------------------------------------------------------+
+```
+
+| Campo | Qué es | Ejemplo en esta práctica |
+|---|---|---|
+| **Tipo (T)** | **CON** (0, confirmable, requiere ACK), **NON** (1, no confirmable), **ACK** (2, confirmación), **RST** (3, reset/rechazo) | El cliente envía CON; el servidor responde con ACK |
+| **Código** | Formato `clase.detalle`. Clase 0 = petición (método), 2 = éxito, 4 = error del cliente, 5 = error del servidor | `0.01` GET, `0.02` POST, `2.05` Content, `4.04` Not Found |
+| **Message ID** | 16 bits; sirve para emparejar CON↔ACK y detectar duplicados | El servidor devuelve el mismo `messageid` de la petición |
+| **Token** | 0–8 bytes; empareja petición y respuesta a nivel de aplicación | El servidor reenvía `packet.token` y `packet.tokenlen` (necesario para `aiocoap`) |
+| **Opciones** | Metadatos. **Uri-Path** (n.º 11) lleva cada segmento de la ruta | `GET /sensor` → Uri-Path = `sensor` |
+| **Payload** | Datos, separados de las opciones por el marcador `0xFF` | `ON`, `OFF`, `Temp: 27.3 C` |
+
+---
+
+## 3. Requisitos
+
+**Hardware**
+- ESP32 (cualquier devkit)
+- LED + resistencia de 220 Ω en el **GPIO 18** (Reto 1, opcional)
+- Red Wi-Fi de **2.4 GHz** (el ESP32 no soporta 5 GHz)
+
+**Software**
+- Arduino IDE con el soporte de placas ESP32
+- Librería **CoAP simple library** (hirotakaster), instalable desde el Gestor de librerías
+- Python 3.9+ y `aiocoap`:
+  ```bash
+  python -m pip install aiocoap
+  ```
+
+---
+
+## 4. Servidor (ESP32)
+
+1. Entra a `servidor_coap/` y copia la plantilla de credenciales:
+   ```bash
+   cp secrets.h.example secrets.h
+   ```
+2. Edita `secrets.h` con el SSID y la contraseña de tu red 2.4 GHz. **Este archivo está en `.gitignore` y no debe subirse.**
+3. Abre `servidor_coap.ino`, selecciona tu placa y puerto, y sube el programa.
+4. Abre el **Monitor Serie a 115200 baudios** y anota la IP que aparece.
+
+### Recursos
+
+| Recurso | Método | Función callback | Comportamiento |
+|---|---|---|---|
+| `/sensor` | GET | `callback_sensor` | Devuelve una temperatura simulada entre 25.4 y 30.3 °C |
+| `/led` | POST | `callback_led` | Payload `ON` / `OFF` enciende/apaga el LED del GPIO 18 |
+
+Cada recurso se registra con `coap.server(callback, "nombre")`. La respuesta se envía con `coap.sendResponse(...)` reenviando **Message ID y Token** de la petición.
+
+> **Nota:** `WiFi.setSleep(false)` evita que la radio "duerma" y pierda datagramas UDP entrantes.
+
+---
+
+## 5. Cliente (Python)
+
+1. Edita `IP_ESP32` en `cliente_coap.py` con la IP mostrada en el Monitor Serie.
+2. Ejecuta (PC en la **misma red** que el ESP32):
+   ```bash
+   python cliente_coap.py
+   ```
+
+Pruebas que realiza:
+
+| Prueba | Petición | Resultado esperado |
+|---|---|---|
+| P1 | `GET /sensor` | `2.05 Content` + `Temp: xx.x C` |
+| P2 | `POST /led` con `ON` | `2.05 Content` + `Estado: OK desde ESP32 CoAP Server` |
+| P3 | `GET /temperatura` | `4.04 Not Found` (el recurso no existe) |
+| P4 | 5 × `GET /sensor` | 5 valores distintos de temperatura |
+
+---
+
+## 6. Salida esperada
+
+**Cliente**
+```
+P1: GET /sensor
+  Código: 2.05 Content | Payload: Temp: 27.3 C
+P2: POST /led con payload ON
+  Código: 2.05 Content | Payload: Estado: OK desde ESP32 CoAP Server
+P3: GET /temperatura (se espera 4.04 Not Found)
+  Código: 4.04 Not Found
+P4: cinco lecturas de /sensor
+  1: Temp: 26.1 C
+  ...
+```
+
+**Monitor Serie**
+```
+Conectando a Wi-Fi.....
+Conectado a la red
+Dirección IP del Servidor CoAP: 10.6.0.24
+Servidor CoAP iniciado en el puerto 5683
+GET /sensor recibido
+Temp: 27.3 C
+Petición CoAP recibida en /led
+Payload recibido: ON
+```
+
+Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición llegó** y que el callback correcto se ejecutó; el cliente confirma que **la respuesta volvió** y fue emparejada (Token/Message ID correctos).
+
+---
+
+## 7. Retos opcionales
+
+- **Reto 1:** conectar un LED real al GPIO 18 y controlarlo con `ON`/`OFF` (ya implementado).
+- Restringir `/led` a POST y responder `4.05 Method Not Allowed` para otros métodos.
+- Probar un mensaje **NON** y comparar con **CON** (con Wireshark, filtro `coap`).
+
+---
+
+## 8. Seguridad de credenciales
+
+- Nunca subas `secrets.h` (está ignorado por Git).
+- Si alguna vez subiste una contraseña real, **cámbiala**: queda en el historial de Git aunque borres el archivo.
+
+---
+
+## 9. Diagnóstico de fallos típicos
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| El Monitor Serie solo muestra puntos `....` | SSID/contraseña incorrectos o red de 5 GHz | Revisar `secrets.h`; usar red de **2.4 GHz** |
+| Caracteres basura en el Monitor Serie | Velocidad incorrecta | Poner **115200** baudios |
+| El cliente da *timeout* (sin respuesta) | PC y ESP32 en redes/VLAN distintas, o aislamiento de clientes (AP isolation) | Conectar ambos a la misma red; probar con hotspot del celular |
+| *Timeout* aunque la red es correcta | Firewall del PC bloquea UDP 5683 | Permitir UDP 5683 (saliente y entrante) |
+| *Timeout* y el Monitor Serie sí muestra la petición | La respuesta no se empareja: falta el **Token** | Reenviar `packet.token` y `packet.tokenlen` en `sendResponse` |
+| Peticiones intermitentes, se pierden datagramas | Ahorro de energía Wi-Fi activo | `WiFi.setSleep(false)` |
+| IP incorrecta / `Network unreachable` | `IP_ESP32` desactualizada (DHCP cambió) | Revisar la IP actual en el Monitor Serie |
+| `4.04 Not Found` en `/sensor` o `/led` | Ruta mal escrita o recurso no registrado | Verificar `coap.server(cb, "sensor")` y la URI (sin mayúsculas) |
+| `4.04 Not Found` en `/temperatura` | Es el comportamiento esperado (P3) | Ninguna: el recurso no existe |
+| El LED no responde | Payload distinto de `ON`/`OFF` (distingue mayúsculas), pin o polaridad incorrectos | Enviar `b"ON"`; revisar GPIO 18 y resistencia |
+| `ModuleNotFoundError: aiocoap` | Librería no instalada | `python -m pip install aiocoap` |
+| Error de compilación: `coap-simple.h` no encontrado | Librería sin instalar | Instalar *CoAP simple library* desde el Gestor de librerías |
+| Error de compilación: `secrets.h` no encontrado | No se creó el archivo de credenciales | `cp secrets.h.example secrets.h` |
+
+---
+
+## Referencias
+
+- RFC 7252 — The Constrained Application Protocol (CoAP)
+- [CoAP simple library (hirotakaster)](https://github.com/hirotakaster/CoAP)
+- [aiocoap](https://aiocoap.readthedocs.io/)
