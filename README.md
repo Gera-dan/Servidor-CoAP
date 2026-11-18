@@ -2,6 +2,24 @@
 
 Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP (puerto 5683) con dos recursos, y un **cliente en Python** (`aiocoap`) para probarlo.
 
+<a id="indice"></a>
+
+## Índice
+
+- [Objetivos](#objetivos)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [1. ¿Por qué CoAP usa UDP? CoAP vs. HTTP sobre TCP](#1-por-qué-coap-usa-udp-coap-vs-http-sobre-tcp)
+- [2. Anatomía de un mensaje CoAP](#2-anatomía-de-un-mensaje-coap)
+- [3. Requisitos](#3-requisitos)
+- [4. Servidor (ESP32)](#4-servidor-esp32)
+- [5. Cliente (Python)](#5-cliente-python)
+- [6. Salida esperada](#6-salida-esperada)
+- [7. Retos opcionales](#7-retos-opcionales)
+- [8. Seguridad de credenciales](#8-seguridad-de-credenciales)
+- [9. Diagnóstico de fallos típicos](#9-diagnóstico-de-fallos-típicos)
+- [10. Evidencia de funcionamiento](#10-evidencia-de-funcionamiento)
+- [Referencias](#referencias)
+
 ## Objetivos
 
 1. Explicar por qué CoAP usa UDP y en qué se diferencia de HTTP sobre TCP en sobrecarga, latencia y consumo de energía.
