@@ -224,10 +224,10 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 Esta sección muestra que la práctica funciona en hardware real.
 
 ### Integrantes
-- Diego Antonio Badillo Morales
-- Gerardo Daniel Olivares Alvarez
+- 230110025 Diego Antonio Badillo Morales
+- 230110052 Gerardo Daniel Olivares Alvarez
 - 230110150 Daniel Aldana Lopez
-- Ricardo Lopez Cruz
+- 230110088 Ricardo Lopez Cruz
 
 ### Montaje
 Placa ESP32 conectada, con el LED en el GPIO 18.
