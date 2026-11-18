@@ -18,7 +18,6 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 - [8. Seguridad de credenciales](#8-seguridad-de-credenciales)
 - [9. Diagnóstico de fallos típicos](#9-diagnóstico-de-fallos-típicos)
 - [10. Evidencia de funcionamiento](#10-evidencia-de-funcionamiento)
-- [Referencias](#referencias)
 
 ## Objetivos
 
