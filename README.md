@@ -53,7 +53,7 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 
 ## 1. ¿Por qué CoAP usa UDP? CoAP vs. HTTP sobre TCP
 
-CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositivos con poca memoria, poca energía y redes con pérdidas. Mantiene un modelo parecido a HTTP (métodos GET/POST/PUT/DELETE, URIs, códigos de respuesta), pero lo coloca sobre **UDP**.
+CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositivos con poca memoria, poca energía y redes con pérdidas. Mantiene un modelo parecido a HTTP (métodos GET/POST/PUT) pero elimina la sobrecarga de TCP. Funciona por datagramas: el paquete completo cabe en un mensaje IP y no hay estado de conexión persistente.
 
 | Aspecto | HTTP sobre TCP | CoAP sobre UDP |
 |---|---|---|
@@ -180,7 +180,7 @@ Petición CoAP recibida en /led
 Payload recibido: ON
 ```
 
-Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición llegó** y que el callback correcto se ejecutó; el cliente confirma que **la respuesta volvió** y fue emparejada (Token/Message ID correctos).
+Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición llegó** y que el callback correcto se ejecutó; el cliente confirma que **la respuesta volvió** y fue emparejada correctamente.
 
 ---
 
@@ -226,7 +226,7 @@ Esta sección muestra que la práctica funciona en hardware real.
 ### Integrantes
 - Diego Antonio Badillo Morales
 - Gerardo Daniel Olivares Alvarez
-- Daniel Aldana Lopez
+- 230110150 Daniel Aldana Lopez
 - Ricardo Lopez Cruz
 
 ### Montaje
