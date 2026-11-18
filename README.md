@@ -209,7 +209,7 @@ Esta sección muestra que la práctica funciona en hardware real.
 ### Montaje
 Placa ESP32 conectada, con el LED en el GPIO 18.
 
-![Montaje del ESP32 con el LED](/Evidencias/0.jpeg.jpg)
+![Montaje del ESP32 con el LED](/Evidencias/0.jpeg)
 
 ### Monitor Serie
 Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
@@ -223,22 +223,22 @@ Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 
 ### El equipo
 
-![EQUIPO](/Evidencias/2.png)
+![EQUIPO](/Evidencias/2.jpeg)
 
-![EQUIPO](/Evidencias/6.png)
+![EQUIPO](/Evidencias/6.jpeg)
 
-![EQUIPO](/Evidencias/7.png)
+![EQUIPO](/Evidencias/7.jpeg)
 
-![EQUIPO](/Evidencias/8.png)
+![EQUIPO](/Evidencias/8.jpeg)
 
 
 ### Videos
 
 **Video 1 — Demostración del servidor y el cliente:** ejecución de `cliente_coap.py` mientras se ve el Monitor Serie.
 
-![](/Evidencias/1v-muted.mp4)
+![V](/Evidencias/1v-muted.mp4)
 
 **Video 2 — Demostración en Wiresharck**.
 
-![](/Evidencias/Grabación.mp4)
+![V](/Evidencias/Grabación.mp4)
 
