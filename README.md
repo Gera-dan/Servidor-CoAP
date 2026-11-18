@@ -241,3 +241,4 @@ Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 **Video 2 — Demostración en Wiresharck**.
 
 ![](/Evidencias/Grabación.mp4)
+
