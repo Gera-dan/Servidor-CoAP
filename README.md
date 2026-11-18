@@ -209,32 +209,35 @@ Esta sección muestra que la práctica funciona en hardware real.
 ### Montaje
 Placa ESP32 conectada, con el LED en el GPIO 18.
 
-![Montaje del ESP32 con el LED](media/foto_montaje.jpg)
+![Montaje del ESP32 con el LED](/Evidencias/0.jpeg.jpg)
 
 ### Monitor Serie
 Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 
-![Monitor Serie del ESP32](media/captura_monitor_serie.png)
+![Monitor Serie del ESP32](/Evidencias/1.jpeg)
 
-### Cliente Python
-Respuestas de P1 a P4: `2.05 Content` en `/sensor` y `/led`, y `4.04 Not Found` en `/temperatura`.
+![Monitor Serie del ESP32](/Evidencias/3.jpeg)
 
-![Salida del cliente_coap.py](media/captura_cliente.png)
+![Monitor Serie del ESP32](/Evidencias/4.png)
+
+
+### El equipo
+
+![EQUIPO](/Evidencias/2.png)
+
+![EQUIPO](/Evidencias/6.png)
+
+![EQUIPO](/Evidencias/7.png)
+
+![EQUIPO](/Evidencias/8.png)
+
 
 ### Videos
 
 **Video 1 — Demostración del servidor y el cliente:** ejecución de `cliente_coap.py` mientras se ve el Monitor Serie.
 
-https://github.com/USUARIO/REPO/assets/PEGAR_AQUI_EL_ENLACE_DEL_VIDEO_1
+![](/Evidencias/1v-muted.mp4)
 
-**Video 2 — Control del LED con `POST /led`:** el LED se enciende con `ON` y se apaga con `OFF`.
+**Video 2 — Demostración en Wiresharck**.
 
-https://github.com/USUARIO/REPO/assets/PEGAR_AQUI_EL_ENLACE_DEL_VIDEO_2
-
----
-
-## Referencias
-
-- RFC 7252 — The Constrained Application Protocol (CoAP)
-- [CoAP simple library (hirotakaster)](https://github.com/hirotakaster/CoAP)
-- [aiocoap](https://aiocoap.readthedocs.io/)
+![](/Evidencias/Grabación.mp4)
