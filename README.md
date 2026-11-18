@@ -18,6 +18,7 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 - [8. Seguridad de credenciales](#8-seguridad-de-credenciales)
 - [9. Diagnóstico de fallos típicos](#9-diagnóstico-de-fallos-típicos)
 - [10. Evidencia de funcionamiento](#10-evidencia-de-funcionamiento)
+- [11. Preguntas y respuestas](#11-Preguntas-de-análisis)
 
 ## Objetivos
 
@@ -265,3 +266,86 @@ https://github.com/user-attachments/assets/4a8561d9-5932-4d89-aff5-e7cf80d07390
 **Video 2 — Demostración en Wiresharck**.
 
 https://github.com/user-attachments/assets/9874a7e1-2726-4359-a5c7-8a9fe87ab5f3
+
+
+---
+
+## 11. Preguntas de análisis
+
+> Los valores marcados con `[ ]` corresponden a la captura de Wireshark (filtro `coap`), ver Video 2 en la sección 10.
+
+### 1. ¿Por qué CoAP puede usar UDP si UDP no garantiza la entrega?
+
+CoAP está diseñado para dispositivos con poca memoria y energía, como el ESP32. TCP exige handshake de 3 vías, estado de conexión y más paquetes con la radio encendida, así que CoAP usa UDP y añade una fiabilidad **opcional y ligera en la capa de aplicación**.
+
+- **Mecanismo que compensa:** los mensajes **CON (Confirmable)**. El receptor responde con un **ACK** con el mismo *Message ID*; si el emisor no lo recibe, **retransmite** con *backoff* exponencial (timeout inicial de 2 a 3 s que se duplica, hasta 4 retransmisiones, RFC 7252). En esta práctica, `aiocoap` envía CON y es el cliente quien retransmite; el ESP32 solo responde.
+- **Cuándo no se usa:** con mensajes **NON (Non-confirmable)**, que se envían sin esperar ACK ni retransmitir (útil en telemetría, donde la siguiente lectura reemplaza a la perdida), y en **multicast**, que solo admite NON.
+
+### 2. ¿La respuesta de `/sensor` fue un ACK independiente o "a cuestas" (piggybacked)?
+
+Fue **piggybacked**: el ACK y el payload viajan en el mismo datagrama.
+
+| Evidencia | Detalle |
+|---|---|
+| **Captura** | Paquete `[N]`: `Type: Acknowledgement (2)`, `Code: 2.05 Content`, `Message ID: [0x____]` (igual al de la petición) y `Payload: Temp: [xx.x] C` |
+| **Ausencia de ACK vacío** | No aparece antes un paquete `Code: 0.00 Empty` (4 bytes, sin payload) ni un segundo mensaje con el contenido |
+| **Código** | `callback_sensor` llama a `coap.sendResponse(...)` de inmediato, y la librería arma la respuesta con tipo ACK, código `COAP_CONTENT` (2.05) y payload en un solo paquete |
+
+### 3. ¿Qué campo permitió saber que la respuesta correspondía a mi petición?
+
+El **Token**, apoyado por el **Message ID** (ver [sección 2](#2-anatomía-de-un-mensaje-coap)):
+
+- El **Token** empareja petición y respuesta a nivel de aplicación.
+- El **Message ID** empareja el CON con su ACK y detecta duplicados.
+
+El servidor copia ambos de la petición a la respuesta:
+
+```cpp
+coap.sendResponse(ip, port, packet.messageid,
+                  respuesta.c_str(), respuesta.length(),
+                  COAP_CONTENT, COAP_TEXT_PLAIN,
+                  packet.token, packet.tokenlen);
+```
+
+| Campo | Petición | Respuesta |
+|---|---|---|
+| Token | `[0x____]` | `[0x____]` |
+| Message ID | `[0x____]` | `[0x____]` |
+
+Un compañero que consulte el mismo ESP32 tendría otro Token, otro Message ID y otro puerto UDP de origen, por lo que su respuesta no coincidiría con la mía. Si el servidor no reenviara el Token, `aiocoap` no podría emparejar la respuesta y daría *timeout* (ver [sección 9](#9-diagnóstico-de-fallos-típicos)).
+
+### 4. Tamaño del mensaje CoAP de respuesta vs. HTTP/1.1
+
+| Parte del mensaje CoAP | Bytes |
+|---|---|
+| Cabecera fija (Ver, T, TKL, Code, Message ID) | 4 |
+| Token | `[TKL]` (2 en este caso) |
+| Opción Content-Format | `[3]` |
+| Marcador `0xFF` | 1 |
+| Payload `Temp: xx.x C` | 12 |
+| **Total CoAP** | **`[22]` bytes** |
+
+Con UDP (8), IP (20) y Ethernet (14), el frame completo mide unos `[64]` bytes. Una petición HTTP/1.1 mínima ocupa de **200 a 500 bytes** solo en cabeceras (`Host`, `Content-Type`, `Content-Length`...), más el handshake TCP y el cierre de conexión. CoAP resulta **más de 10 veces más pequeño** y resuelve la consulta con solo 2 datagramas.
+
+### 5. ¿CON o NON para reportar humedad cada minuto con una bomba de riego a batería?
+
+Usaría **NON** para las lecturas periódicas, y **CON** para alertas críticas y para los comandos que activan o apagan la bomba.
+
+- **Costo en energía:** lo que más consume es la **radio encendida**. Con CON, la radio debe esperar el ACK y, si se pierde, retransmitir hasta 4 veces. Con NON se transmite una vez y la radio se apaga, de modo que el nodo duerme casi todo el minuto.
+- **Pérdida tolerable:** la humedad es una lectura reemplazable; si se pierde una, la siguiente llega en 60 s.
+- **Nota sobre este código:** `WiFi.setSleep(false)` y el `loop()` escuchando permanentemente mantienen la radio siempre activa, lo contrario de lo que conviene a una batería. En un nodo real, lo ideal es despertar cada minuto, enviar el NON y volver a *deep sleep*.
+
+### 6. Riesgo de seguridad de un servidor CoAP sin DTLS en red compartida
+
+Sin DTLS el tráfico viaja en **texto claro y sin autenticación**:
+
+| Riesgo | Descripción |
+|---|---|
+| **Espionaje** | Cualquiera con Wireshark ve peticiones y respuestas |
+| **Control no autorizado** | `/led` acepta un `POST` con `ON`/`OFF` de cualquiera que conozca la IP; con una bomba real, podría activarla o apagarla |
+| **Manipulación y *replay*** | No hay integridad ni verificación de origen |
+| **Amplificación/reflexión DDoS** | UDP permite falsificar la IP de origen |
+
+**Quién podría explotarlo en el laboratorio:** cualquier compañero conectado a la misma red, con `aiocoap`, Copper o Wireshark apuntando a la IP del ESP32 (puerto 5683).
+
+**Mitigación:** **DTLS** (`coaps://`, puerto 5684) u **OSCORE**.
