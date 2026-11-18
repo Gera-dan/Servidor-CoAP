@@ -18,7 +18,7 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 - [8. Seguridad de credenciales](#8-seguridad-de-credenciales)
 - [9. Diagnóstico de fallos típicos](#9-diagnóstico-de-fallos-típicos)
 - [10. Evidencia de funcionamiento](#10-evidencia-de-funcionamiento)
-- [11. Preguntas y respuestas](#11-Preguntas-de-análisis)
+- [11. Preguntas y respuestas](#11-preguntas-y-respuestas)
 
 ## Objetivos
 
@@ -31,7 +31,6 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 ## Estructura del repositorio
 
 ```
-.
 .
 ├── README.md
 ├── .gitignore
@@ -54,7 +53,7 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 
 ## 1. ¿Por qué CoAP usa UDP? CoAP vs. HTTP sobre TCP
 
-CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositivos con poca memoria, poca energía y redes con pérdidas. Mantiene un modelo parecido a HTTP (métodos GET/POST/PUT) pero elimina la sobrecarga de TCP. Funciona por datagramas: el paquete completo cabe en un mensaje IP y no hay estado de conexión persistente.
+CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositivos con poca memoria, poca energía y redes con pérdidas. Mantiene un modelo parecido a HTTP (métodos GET/POST/PUT/DELETE, URIs, códigos de respuesta), pero lo coloca sobre **UDP**.
 
 | Aspecto | HTTP sobre TCP | CoAP sobre UDP |
 |---|---|---|
@@ -114,12 +113,9 @@ CoAP (*Constrained Application Protocol*, RFC 7252) está pensado para dispositi
 
 ## 4. Servidor (ESP32)
 
-1. Entra a `servidor_coap/` y copia la plantilla de credenciales:
-   ```bash
-   cp secrets.h.example secrets.h
-   ```
-2. Edita `secrets.h` con el SSID y la contraseña de tu red 2.4 GHz. **Este archivo está en `.gitignore` y no debe subirse.**
-3. Abre `servidor_coap.ino`, selecciona tu placa y puerto, y sube el programa.
+1. Abre `SAUUUUUUUUUUUUL.ino` en el Arduino IDE.
+2. Edita las variables `ssid` y `password` con los datos de tu red de 2.4 GHz. **No subas tu contraseña real a GitHub** (ver sección 8).
+3. Selecciona la placa (*ESP32 Dev Module*) y el puerto, y sube el programa.
 4. Abre el **Monitor Serie a 115200 baudios** y anota la IP que aparece.
 
 ### Recursos
@@ -145,12 +141,12 @@ Cada recurso se registra con `coap.server(callback, "nombre")`. La respuesta se 
 
 Pruebas que realiza:
 
-| Prueba | Petición | Resultado esperado |
+| Prueba | Petición | Resultado obtenido |
 |---|---|---|
 | P1 | `GET /sensor` | `2.05 Content` + `Temp: xx.x C` |
 | P2 | `POST /led` con `ON` | `2.05 Content` + `Estado: OK desde ESP32 CoAP Server` |
-| P3 | `GET /temperatura` | `4.04 Not Found` (el recurso no existe) |
-| P4 | 5 × `GET /sensor` | 5 valores distintos de temperatura |
+| P3 | `GET /temperatura` | Sin respuesta (*timeout*): el recurso no existe y el `4.04` no se empareja por falta de Token (ver sección 9) |
+| P4 | 5 × `GET /sensor` | 5 valores de temperatura |
 
 ---
 
@@ -159,14 +155,17 @@ Pruebas que realiza:
 **Cliente**
 ```
 P1: GET /sensor
-  Código: 2.05 Content | Payload: Temp: 27.3 C
+  Código: 2.05 Content | Payload: Temp: 27.4 C
 P2: POST /led con payload ON
   Código: 2.05 Content | Payload: Estado: OK desde ESP32 CoAP Server
-P3: GET /temperatura (se espera 4.04 Not Found)
-  Código: 4.04 Not Found
+P3: GET /temperatura (recurso inexistente)
+  Sin respuesta en 10 s (la petición no llegó o la respuesta no se aceptó)
 P4: cinco lecturas de /sensor
-  1: Temp: 26.1 C
-  ...
+  1: Temp: 27.6 C
+  2: Temp: 28.6 C
+  3: Temp: 27.6 C
+  4: Temp: 29.6 C
+  5: Temp: 26.4 C
 ```
 
 **Monitor Serie**
@@ -176,12 +175,12 @@ Conectado a la red
 Dirección IP del Servidor CoAP: 10.6.0.24
 Servidor CoAP iniciado en el puerto 5683
 GET /sensor recibido
-Temp: 27.3 C
+Temp: 27.4 C
 Petición CoAP recibida en /led
 Payload recibido: ON
 ```
 
-Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición llegó** y que el callback correcto se ejecutó; el cliente confirma que **la respuesta volvió** y fue emparejada correctamente.
+Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición llegó** y que el callback correcto se ejecutó; el cliente confirma que **la respuesta volvió** y fue emparejada (Token/Message ID correctos).
 
 ---
 
@@ -195,8 +194,9 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 
 ## 8. Seguridad de credenciales
 
-- Nunca subas `secrets.h` (está ignorado por Git).
+- **No dejes la contraseña real escrita en el `.ino` que subes a GitHub.** Usa una red de pruebas o un hotspot, o mueve las credenciales a un archivo `secrets.h` (`#include "secrets.h"`) agregado al `.gitignore`.
 - Si alguna vez subiste una contraseña real, **cámbiala**: queda en el historial de Git aunque borres el archivo.
+- No subas capturas donde se vea la contraseña (por ejemplo, del Arduino IDE).
 
 ---
 
@@ -204,19 +204,18 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| El Monitor Serie solo muestra puntos `....` | SSID/contraseña incorrectos o red de 5 GHz | Revisar `secrets.h`; usar red de **2.4 GHz** |
+| El Monitor Serie solo muestra puntos `....` | SSID/contraseña incorrectos o red de 5 GHz | Revisar `ssid` y `password`; usar red de **2.4 GHz** |
 | Caracteres basura en el Monitor Serie | Velocidad incorrecta | Poner **115200** baudios |
 | El cliente da *timeout* (sin respuesta) | PC y ESP32 en redes/VLAN distintas, o aislamiento de clientes (AP isolation) | Conectar ambos a la misma red; probar con hotspot del celular |
 | *Timeout* aunque la red es correcta | Firewall del PC bloquea UDP 5683 | Permitir UDP 5683 (saliente y entrante) |
 | *Timeout* y el Monitor Serie sí muestra la petición | La respuesta no se empareja: falta el **Token** | Reenviar `packet.token` y `packet.tokenlen` en `sendResponse` |
+| `GET` a un recurso inexistente da *timeout* en vez de `4.04` (caso de P3) | La librería responde `4.04` sin reenviar el Token y `aiocoap` no la empareja | Comportamiento de la librería; para evitarlo habría que reenviar el Token en la respuesta de error |
 | Peticiones intermitentes, se pierden datagramas | Ahorro de energía Wi-Fi activo | `WiFi.setSleep(false)` |
 | IP incorrecta / `Network unreachable` | `IP_ESP32` desactualizada (DHCP cambió) | Revisar la IP actual en el Monitor Serie |
-| `4.04 Not Found` en `/sensor` o `/led` | Ruta mal escrita o recurso no registrado | Verificar `coap.server(cb, "sensor")` y la URI (sin mayúsculas) |
-| `4.04 Not Found` en `/temperatura` | Es el comportamiento esperado (P3) | Ninguna: el recurso no existe |
+| `4.04 Not Found` o *timeout* en `/sensor` o `/led` | Ruta mal escrita o recurso no registrado | Verificar `coap.server(cb, "sensor")` y la URI (sin mayúsculas) |
 | El LED no responde | Payload distinto de `ON`/`OFF` (distingue mayúsculas), pin o polaridad incorrectos | Enviar `b"ON"`; revisar GPIO 18 y resistencia |
 | `ModuleNotFoundError: aiocoap` | Librería no instalada | `python -m pip install aiocoap` |
 | Error de compilación: `coap-simple.h` no encontrado | Librería sin instalar | Instalar *CoAP simple library* desde el Gestor de librerías |
-| Error de compilación: `secrets.h` no encontrado | No se creó el archivo de credenciales | `cp secrets.h.example secrets.h` |
 
 ---
 
@@ -225,10 +224,10 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 Esta sección muestra que la práctica funciona en hardware real.
 
 ### Integrantes
-- 230110025 Diego Antonio Badillo Morales
-- 230110052 Gerardo Daniel Olivares Alvarez
-- 230110150 Daniel Aldana Lopez
-- 230110088 Ricardo Lopez Cruz
+- Diego Antonio Badillo Morales
+- Gerardo Daniel Olivares Alvarez
+- Daniel Aldana Lopez
+- Ricardo Lopez Cruz
 
 ### Montaje
 Placa ESP32 conectada, con el LED en el GPIO 18.
@@ -244,7 +243,6 @@ Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 
 ![Monitor Serie del ESP32](/Evidencias/4.png)
 
-
 ### El equipo
 
 ![EQUIPO](/Evidencias/2.jpeg)
@@ -255,22 +253,19 @@ Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 
 ![EQUIPO](/Evidencias/8.jpeg)
 
-
 ### Videos
 
 **Video 1 — Demostración del servidor y el cliente:** ejecución de `cliente_coap.py` mientras se ve el Monitor Serie.
 
 https://github.com/user-attachments/assets/4a8561d9-5932-4d89-aff5-e7cf80d07390
 
-
-**Video 2 — Demostración en Wiresharck**.
+**Video 2 — Demostración en Wireshark.**
 
 https://github.com/user-attachments/assets/9874a7e1-2726-4359-a5c7-8a9fe87ab5f3
 
-
 ---
 
-## 11. Preguntas de análisis
+## 11. Preguntas y respuestas
 
 > Los valores marcados con `[ ]` corresponden a la captura de Wireshark (filtro `coap`), ver Video 2 en la sección 10.
 
@@ -312,7 +307,9 @@ coap.sendResponse(ip, port, packet.messageid,
 | Token | `[0x____]` | `[0x____]` |
 | Message ID | `[0x____]` | `[0x____]` |
 
-Un compañero que consulte el mismo ESP32 tendría otro Token, otro Message ID y otro puerto UDP de origen, por lo que su respuesta no coincidiría con la mía. Si el servidor no reenviara el Token, `aiocoap` no podría emparejar la respuesta y daría *timeout* (ver [sección 9](#9-diagnóstico-de-fallos-típicos)).
+Un compañero que consulte el mismo ESP32 tendría otro Token, otro Message ID y otro puerto UDP de origen, por lo que su respuesta no coincidiría con la mía.
+
+**Evidencia en la práctica:** en la prueba P3 (`GET /temperatura`), el servidor no tiene ese recurso y la librería responde `4.04` **sin reenviar el Token**. Resultado: `aiocoap` no pudo emparejar la respuesta y terminó en *timeout* de 10 s, aunque el servidor sí contestó. En cambio, P1, P2 y P4 funcionan porque `callback_sensor` y `callback_led` sí reenvían `packet.token`.
 
 ### 4. Tamaño del mensaje CoAP de respuesta vs. HTTP/1.1
 
@@ -322,7 +319,7 @@ Un compañero que consulte el mismo ESP32 tendría otro Token, otro Message ID y
 | Token | `[TKL]` (2 en este caso) |
 | Opción Content-Format | `[3]` |
 | Marcador `0xFF` | 1 |
-| Payload `Temp: xx.x C` | 12 |
+| Payload `Temp: 27.4 C` | 12 |
 | **Total CoAP** | **`[22]` bytes** |
 
 Con UDP (8), IP (20) y Ethernet (14), el frame completo mide unos `[64]` bytes. Una petición HTTP/1.1 mínima ocupa de **200 a 500 bytes** solo en cabeceras (`Host`, `Content-Type`, `Content-Length`...), más el handshake TCP y el cierre de conexión. CoAP resulta **más de 10 veces más pequeño** y resuelve la consulta con solo 2 datagramas.
