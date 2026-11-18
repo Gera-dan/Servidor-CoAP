@@ -14,17 +14,22 @@ Práctica de laboratorio: un ESP32 que funciona como **servidor CoAP** sobre UDP
 
 ```
 .
+.
 ├── README.md
 ├── .gitignore
 ├── cliente_coap.py              # Cliente de prueba (Python + aiocoap)
-├── media/                       # Fotos, capturas y videos de la evidencia
-│   ├── foto_montaje.jpg
-│   ├── captura_monitor_serie.png
-│   ├── captura_cliente.png
-│   └── video_led.mp4 / video_demo.mp4
-└── servidor_coap/
-    ├── servidor_coap.ino        # Firmware del ESP32
-    └── secrets.h.example        # Plantilla de credenciales (copiar a secrets.h)
+├── SAUUUUUUUUUUUUL.ino          # Firmware del ESP32 (servidor CoAP)
+└── Evidencias/                  # Fotos, capturas y videos de la práctica
+    ├── 0.jpeg
+    ├── 1.jpeg
+    ├── 2.jpeg
+    ├── 3.jpeg
+    ├── 4.png
+    ├── 6.jpeg
+    ├── 7.jpeg
+    ├── 8.jpeg
+    ├── 1v-muted.mp4             # Video 1
+    └── G_ligero.mp4             # Video 2
 ```
 
 ---
