@@ -225,9 +225,10 @@ Cómo interpretarlo: cada línea del Monitor Serie confirma que **la petición l
 Esta sección muestra que la práctica funciona en hardware real.
 
 ### Integrantes
-- Nombre 1
-- Nombre 2
-- Nombre 3
+- Diego Antonio Badillo Morales
+- Gerardo Daniel Olivares Alvarez
+- Daniel Aldana Lopez
+- Ricardo Lopez Cruz
 
 ### Montaje
 Placa ESP32 conectada, con el LED en el GPIO 18.
