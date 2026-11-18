@@ -236,9 +236,10 @@ Conexión Wi-Fi, IP asignada y peticiones recibidas por el servidor.
 
 **Video 1 — Demostración del servidor y el cliente:** ejecución de `cliente_coap.py` mientras se ve el Monitor Serie.
 
-![V](/Evidencias/1v-muted.mp4)
+[▶ Ver video 1](Evidencias/1v-muted.mp4)
+
 
 **Video 2 — Demostración en Wiresharck**.
 
-![V](/Evidencias/Grabación.mp4)
+[▶ Ver video 2](Evidencias/G_ligero.mp4)
 
